@@ -19,7 +19,7 @@ export class BatchService {
     this.appid = this.configService.get<string>('OPEN_WEATHER_API_KEY');
   }
 
-  @Cron(CronExpression.EVERY_MINUTE)
+  @Cron(CronExpression.EVERY_HOUR)
   async batchWeather() {
     console.log('batchWeather 실행');
     const locations = await this.prisma.location.findMany();
