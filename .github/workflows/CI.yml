@@ -1,0 +1,70 @@
+name: CI
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - prod
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-and-push-image:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.SAMUEL_PERSONAL_ACCESS_TOKEN }}
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@f2a1d5e99d037542a71f64918e516c093c6f3fc4
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            app=main
+            port=3000
+
+      - name: Checkout manifest private repo
+        uses: actions/checkout@v3
+        with:
+          repository: xodms1701/seestar-manifest
+          token: ${{ secrets.SAMUEL_PERSONAL_ACCESS_TOKEN }}
+
+      - name: Change main deployment.yaml
+        uses: mikefarah/yq@master
+        with:
+          cmd: yq -i '.spec.template.spec.containers.[0].image = "${{ steps.meta.outputs.tags }}"' seestar/deployment.yaml
+
+      - name: Pushes to main deployment.yaml
+        uses: cpina/github-action-push-to-another-repository@main
+        env:
+          API_TOKEN_GITHUB: ${{ secrets.SAMUEL_PERSONAL_ACCESS_TOKEN }}
+        with:
+          source-directory: '.'
+          destination-github-username: 'xodms1701'
+          destination-repository-name: 'seestar-manifest'
+          user-email: 'iostream1701@gmail.com'
+          target-branch: main
+          commit-message: 'Change Image version to ${{ steps.meta.outputs.tags }}'
