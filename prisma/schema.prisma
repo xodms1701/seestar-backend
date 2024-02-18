@@ -1,0 +1,57 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["views"]
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model location {
+  id           Int       @id @default(autoincrement())
+  name         String    @db.VarChar(255)
+  latitude     String    @db.VarChar(255)
+  longitude    String    @db.VarChar(255)
+  english_name String    @db.VarChar(255)
+  weather      weather[]
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model weather {
+  id          Int       @id @default(autoincrement())
+  location_id Int
+  visibility  Int
+  clouds      Int
+  humidity    Int
+  rain        Int?
+  calc_at     DateTime  @db.DateTime(0)
+  created_at  DateTime  @default(now()) @db.DateTime(0)
+  updated_at  DateTime? @db.DateTime(0)
+  deleted_at  DateTime? @db.DateTime(0)
+  type        Int
+  icon        String    @db.VarChar(255)
+  temp        Decimal   @db.Decimal(5, 2)
+  temp_min    Decimal   @db.Decimal(5, 2)
+  temp_max    Decimal   @db.Decimal(5, 2)
+  location    location  @relation(fields: [location_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "weather_ibfk_1")
+
+  @@index([location_id], map: "location_id")
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+/// This view or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+view recent_weather {
+  id         Int       @unique
+  name       String?   @db.VarChar(255)
+  type       Int?
+  icon       String?   @db.VarChar(255)
+  temp       Decimal?  @db.Decimal(5, 2)
+  temp_min   Decimal?  @db.Decimal(5, 2)
+  temp_max   Decimal?  @db.Decimal(5, 2)
+  visibility Int?
+  clouds     Int?
+  humidity   Int?
+  rain       Int?
+  calc_at    DateTime? @db.DateTime(0)
+}
