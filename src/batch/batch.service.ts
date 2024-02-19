@@ -3,7 +3,7 @@ import { PrismaService } from '../prisma.service';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
-import { catchError, firstValueFrom } from 'rxjs';
+import { catchError, firstValueFrom, retry } from 'rxjs';
 import { AxiosError } from 'axios';
 import { Prisma } from '@prisma/client';
 
@@ -19,7 +19,7 @@ export class BatchService {
     this.appid = this.configService.get<string>('OPEN_WEATHER_API_KEY');
   }
 
-  @Cron(CronExpression.EVERY_HOUR)
+  @Cron(CronExpression.EVERY_30_MINUTES)
   async batchWeather() {
     console.log('batchWeather 실행');
     const locations = await this.prisma.location.findMany();
@@ -47,6 +47,7 @@ export class BatchService {
               console.error(error);
               throw 'An error happened!';
             }),
+            retry(5),
           ),
       );
 
